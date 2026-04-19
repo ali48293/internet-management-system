@@ -10,13 +10,18 @@ import os
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
-# Create DB Tables and Initialize Admin (wrapped in try/except for resilience)
-try:
-    init_db()
-except Exception as e:
-    print(f"Database initialization skipped or failed: {e}")
+from contextlib import asynccontextmanager
 
-app = FastAPI(title=settings.PROJECT_NAME)
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Initialize database on startup
+    try:
+        init_db()
+    except Exception as e:
+        print(f"Startup database initialization error: {e}")
+    yield
+
+app = FastAPI(title=settings.PROJECT_NAME, lifespan=lifespan)
 
 @app.exception_handler(StarletteHTTPException)
 async def http_exception_handler(request, exc):
