@@ -70,8 +70,23 @@ app.include_router(users.router, prefix="/api/users", tags=["Users"])
 app.include_router(activity.router, prefix="/api/activity", tags=["Activity"])
 
 @app.get("/api/health")
-def health_check():
-    return {"status": "ok", "environment": settings.ENVIRONMENT}
+def health_check(db: Session = Depends(get_db)):
+    try:
+        user_count = db.query(models.User).count()
+        admin_exists = db.query(models.User).filter(models.User.username == settings.ADMIN_USERNAME).first() is not None
+        return {
+            "status": "ok",
+            "database": "connected",
+            "total_users": user_count,
+            "admin_user_exists": admin_exists,
+            "environment": settings.ENVIRONMENT
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "database": "disconnected",
+            "error": str(e)
+        }
 
 @app.get("/")
 def read_root():

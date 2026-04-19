@@ -3,8 +3,8 @@ import { useAuth } from '../App';
 import { LogIn } from 'lucide-react';
 
 const Login = () => {
-  const [username, setUsername] = useState('admin');
-  const [password, setPassword] = useState('admin123');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
@@ -45,6 +45,7 @@ const Login = () => {
               className="form-control" 
               value={username} 
               onChange={e => setUsername(e.target.value)} 
+              autoComplete="off"
               required 
             />
           </div>
@@ -56,6 +57,7 @@ const Login = () => {
               className="form-control" 
               value={password} 
               onChange={e => setPassword(e.target.value)} 
+              autoComplete="off"
               required 
             />
           </div>
