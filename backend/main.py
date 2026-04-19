@@ -45,11 +45,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Uploads static path
-if not os.path.exists(settings.UPLOAD_DIR):
-    os.makedirs(settings.UPLOAD_DIR)
-
-app.mount("/static", StaticFiles(directory=settings.UPLOAD_DIR), name="static")
+# Uploads static path skipped in production (using Cloudinary for storage)
+if os.getenv("ENVIRONMENT") != "production":
+    if not os.path.exists(settings.UPLOAD_DIR):
+        os.makedirs(settings.UPLOAD_DIR)
+    app.mount("/static", StaticFiles(directory=settings.UPLOAD_DIR), name="static")
 
 # Routers
 app.include_router(auth.router, prefix="/api/auth", tags=["Auth"])
