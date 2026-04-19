@@ -4,13 +4,14 @@ from fastapi.staticfiles import StaticFiles
 from app.api import auth, loopers, packages, payments, dashboard, users, activity
 from app.database import engine, Base
 from app.core.config import settings
+from init_db import init_db
 import os
 
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
-# Create DB Tables
-Base.metadata.create_all(bind=engine)
+# Create DB Tables and Initialize Admin
+init_db()
 
 app = FastAPI(title=settings.PROJECT_NAME)
 
