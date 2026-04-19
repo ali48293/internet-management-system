@@ -1,8 +1,9 @@
 import sys
 import os
 
-# Add the backend directory to the sys.path
-sys.path.append(os.path.join(os.path.dirname(__file__), "..", "backend"))
+# Ensure the backend directory is in the path for Vercel
+root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.join(root_dir, "backend"))
 
 from backend.main import app
 

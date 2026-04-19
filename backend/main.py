@@ -10,18 +10,9 @@ import os
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
-from contextlib import asynccontextmanager
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    # Initialize database on startup
-    try:
-        init_db()
-    except Exception as e:
-        print(f"Startup database initialization error: {e}")
-    yield
-
-app = FastAPI(title=settings.PROJECT_NAME, lifespan=lifespan)
+# Database initialization moved to a manual process for serverless stability
+app = FastAPI(title=settings.PROJECT_NAME)
 
 @app.exception_handler(StarletteHTTPException)
 async def http_exception_handler(request, exc):
@@ -68,6 +59,14 @@ app.include_router(packages.router, prefix="/api/packages", tags=["Packages"])
 app.include_router(payments.router, prefix="/api/payments", tags=["Payments"])
 app.include_router(users.router, prefix="/api/users", tags=["Users"])
 app.include_router(activity.router, prefix="/api/activity", tags=["Activity"])
+
+@app.get("/api/db-init")
+def trigger_db_init():
+    try:
+        init_db()
+        return {"status": "success", "message": "Database initialized and admin user checked/created."}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
 
 @app.get("/api/health")
 def health_check(db: Session = Depends(get_db)):
