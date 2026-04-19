@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+    container_name: loopers_backend
+    environment:
+      - DATABASE_URL=sqlite:///./loopers.db
+      - SECRET_KEY=supersecret_key_prod_only
+      - ADMIN_USERNAME=admin
+      - ADMIN_PASSWORD=admin123
+      - UPLOAD_DIR=uploads
+    volumes:
+      - ./backend/data:/app/data
+      - ./uploads:/app/uploads
+    ports:
+      - "8005:8000"
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: loopers_frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
