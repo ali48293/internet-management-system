@@ -37,12 +37,7 @@ async def validation_exception_handler(request, exc):
         content={"detail": exc.errors()},
     )
 
-@app.exception_handler(Exception)
-async def generic_exception_handler(request, exc):
-    return JSONResponse(
-        status_code=500,
-        content={"detail": "An internal server error occurred. Please contact support."},
-    )
+# Removed generic exception handler to allow Vercel to show real errors
 
 # CORS
 origins = [
@@ -73,6 +68,10 @@ app.include_router(packages.router, prefix="/api/packages", tags=["Packages"])
 app.include_router(payments.router, prefix="/api/payments", tags=["Payments"])
 app.include_router(users.router, prefix="/api/users", tags=["Users"])
 app.include_router(activity.router, prefix="/api/activity", tags=["Activity"])
+
+@app.get("/api/health")
+def health_check():
+    return {"status": "ok", "environment": settings.ENVIRONMENT}
 
 @app.get("/")
 def read_root():
