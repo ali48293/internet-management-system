@@ -1,10 +1,10 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from app.api import auth, loopers, packages, payments, dashboard, users, activity
-from app.database import engine, Base
-from app.core.config import settings
-from init_db import init_db
+from backend.app.api import auth, loopers, packages, payments, dashboard, users, activity
+from backend.app.database import engine, Base
+from backend.app.core.config import settings
+from backend.init_db import init_db
 import os
 
 from fastapi.responses import JSONResponse

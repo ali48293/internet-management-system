@@ -1,8 +1,8 @@
 from sqlalchemy.orm import Session
-from app.database import SessionLocal, engine, Base
-from app import models
-from app.core import security
-from app.core.config import settings
+from backend.app.database import SessionLocal, engine, Base
+from backend.app import models
+from backend.app.core import security
+from backend.app.core.config import settings
 
 def init_db():
     Base.metadata.create_all(bind=engine)

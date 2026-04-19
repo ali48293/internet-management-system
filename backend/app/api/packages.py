@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
-from app import models, schemas
-from app.database import get_db
-from app.core import security
-from app.api.loopers import log_activity # Reuse from loopers.py
+from backend.app import models, schemas
+from backend.app.database import get_db
+from backend.app.core import security
+from backend.app.api.loopers import log_activity # Reuse from loopers.py
 
 router = APIRouter()
 

@@ -1,76 +1,42 @@
-# Looper Management System
+# AD Internet Management System
 
-A comprehensive management system for tracking loopers, their data package purchases, and payments.
+A full-stack management system for internet packages, payments, and client reports.
 
-## 🚀 Features
+## Tech Stack
+- **Frontend**: React (Vite)
+- **Backend**: FastAPI (Python)
+- **Database**: PostgreSQL (Neon.tech)
+- **Image Storage**: Cloudinary
+- **Hosting**: Vercel (Monorepo)
 
-- **Looper Management**: Register and manage loopers with profile details and CNIC documents.
-- **Package Management**: Define data packages with custom pricing.
-- **Purchase Tracking**: Monitor package purchases made by loopers.
-- **Payment Processing**: Log payments with receipt uploads for verification.
-- **Dashboard**: Real-time overview of total loopers, active packages, and financial summaries.
+## Deployment Instructions (Vercel)
 
-## 🛠️ Tech Stack
+When importing this repository into Vercel as a new project, use the following settings to ensure both the frontend and backend are deployed in one project:
 
-- **Frontend**: React.js with Vite, Tailwind CSS (implied by modern look), Lucide React for icons.
-- **Backend**: FastAPI (Python), SQLAlchemy ORM.
-- **Database**: SQLite (local) / PostgreSQL (production ready).
-- **Containerization**: Docker & Docker Compose.
+### 1. Build & Output Settings
+- **Framework Preset**: `Other`
+- **Root Directory**: `.`
+- **Build Command**: `npm install --prefix frontend && npm run build --prefix frontend`
+- **Output Directory**: `frontend/dist`
+- **Install Command**: `npm install --prefix frontend`
 
-## 🏃 Getting Started
+### 2. Required Environment Variables
+Add these in the Vercel Dashboard settings:
+- `DATABASE_URL`: Your PostgreSQL connection string.
+- `CLOUDINARY_CLOUD_NAME`: Cloudinary cloud name.
+- `CLOUDINARY_API_KEY`: Cloudinary API key.
+- `CLOUDINARY_API_SECRET`: Cloudinary API secret.
+- `VITE_API_URL`: `/api`
+- `ENVIRONMENT`: `production`
 
-### Prerequisites
+## Local Development
 
-- Docker and Docker Compose installed on your machine.
+### Backend
+1. `cd backend`
+2. `pip install -r requirements.txt`
+3. `uvicorn main:app --reload --port 8085`
 
-### Quick Start (Docker)
-
-To run the entire application using Docker:
-
-1.  **Clone the repository**:
-    ```bash
-    git clone <repository-url>
-    cd internet
-    ```
-
-2.  **Start the services**:
-    ```bash
-    docker compose up -d --build
-    ```
-
-3.  **Access the application**:
-    - Frontend: [http://localhost](http://localhost)
-    - Backend API Docs: [http://localhost:8005/docs](http://localhost:8005/docs)
-
-### Default Credentials
-
-- **Username**: `admin`
-- **Password**: `admin123`
-
-## ⚙️ Configuration
-
-Environment variables can be configured in the `docker-compose.yml` or a `.env` file:
-
-- `DATABASE_URL`: SQLAlchemy database connection string.
-- `SECRET_KEY`: Security key for JWT authentication.
-- `ADMIN_USERNAME`: Default admin username.
-- `ADMIN_PASSWORD`: Default admin password.
-
-## 📁 Project Structure
-
-```text
-.
-├── backend/            # FastAPI Backend
-│   ├── app/           # Application logic (models, routes, core)
-│   ├── main.py        # Entry point
-│   └── Dockerfile     # Backend Docker configuration
-├── frontend/           # React Frontend
-│   ├── src/           # Components, pages, assets
-│   └── Dockerfile     # Frontend Docker configuration
-├── docker-compose.yml  # Orchestration
-└── README.md           # This file
-```
-
-## 📜 License
-
-This project is licensed under the MIT License.
+### Frontend
+1. `cd frontend`
+2. `npm install`
+3. `npm run dev`

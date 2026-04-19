@@ -1,15 +1,15 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from sqlalchemy.orm import Session
 from typing import List, Optional
-from app import models, schemas
-from app.database import get_db
-from app.core import security
-from app.api.loopers import log_activity
+from backend.app import models, schemas
+from backend.app.database import get_db
+from backend.app.core import security
+from backend.app.api.loopers import log_activity
 import os
 import uuid
 import shutil
-from app.core.config import settings
-from app.utils.storage import upload_file
+from backend.app.core.config import settings
+from backend.app.utils.storage import upload_file
 
 router = APIRouter()
 
