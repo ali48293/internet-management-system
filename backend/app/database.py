@@ -5,7 +5,9 @@ import os
 
 engine_url = settings.DATABASE_URL
 if engine_url.startswith("postgres://"):
-    engine_url = engine_url.replace("postgres://", "postgresql://", 1)
+    engine_url = engine_url.replace("postgres://", "postgresql+pg8000://", 1)
+elif engine_url.startswith("postgresql://"):
+    engine_url = engine_url.replace("postgresql://", "postgresql+pg8000://", 1)
 
 engine_kwargs = {}
 if engine_url.startswith("sqlite"):
