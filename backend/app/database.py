@@ -3,11 +3,18 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 from app.core.config import settings
 import os
 
-engine_kwargs = {}
-if settings.DATABASE_URL.startswith("sqlite"):
-    engine_kwargs["connect_args"] = {"check_same_thread": False}
+engine_url = settings.DATABASE_URL
+if engine_url.startswith("postgres://"):
+    engine_url = engine_url.replace("postgres://", "postgresql://", 1)
 
-engine = create_engine(settings.DATABASE_URL, **engine_kwargs)
+engine_kwargs = {}
+if engine_url.startswith("sqlite"):
+    engine_kwargs["connect_args"] = {"check_same_thread": False}
+else:
+    # Essential for Neon/Vercel: ensure SSL is handled
+    engine_kwargs["connect_args"] = {"sslmode": "require"}
+
+engine = create_engine(engine_url, **engine_kwargs)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()
