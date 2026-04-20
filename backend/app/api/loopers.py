@@ -21,7 +21,31 @@ from reportlab.lib.pagesizes import A4
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+import arabic_reshaper
+from bidi.algorithm import get_display
 
+# Font registration for Urdu support
+FONT_PATH = os.path.join(os.path.dirname(__file__), "..", "static", "fonts", "NotoSansArabic-Regular.ttf")
+if os.path.exists(FONT_PATH):
+    pdfmetrics.registerFont(TTFont('UnicodeFont', FONT_PATH))
+    DEFAULT_FONT = 'UnicodeFont'
+else:
+    DEFAULT_FONT = 'Helvetica'
+
+def format_pdf_text(text: str) -> str:
+    """Reshapes and applies BIDI to text if it contains Urdu/Arabic characters."""
+    if not text:
+        return ""
+    # Check if text contains non-ASCII characters (simplistic check for Urdu/Arabic)
+    if any(ord(c) > 127 for c in text):
+        try:
+            reshaped_text = arabic_reshaper.reshape(text)
+            return get_display(reshaped_text)
+        except Exception:
+            return text
+    return text
 
 router = APIRouter()
 
@@ -366,6 +390,7 @@ def get_looper_report(looper_id: int, db: Session = Depends(get_db), current_use
     header_style = ParagraphStyle(
         'HeaderStyle',
         parent=styles['Heading1'],
+        fontName=DEFAULT_FONT,
         fontSize=18,
         spaceAfter=12,
         alignment=1 # Center
@@ -374,24 +399,32 @@ def get_looper_report(looper_id: int, db: Session = Depends(get_db), current_use
     section_style = ParagraphStyle(
         'SectionStyle',
         parent=styles['Heading3'],
+        fontName=DEFAULT_FONT,
         fontSize=12,
         spaceBefore=10,
         spaceAfter=6,
         textColor=colors.HexColor("#3b82f6")
     )
 
+    item_style = ParagraphStyle(
+        'ItemStyle',
+        parent=styles['Normal'],
+        fontName=DEFAULT_FONT,
+        fontSize=10
+    )
+
     # Report Header
-    elements.append(Paragraph(f"{settings.PROJECT_NAME} - Client Report", header_style))
-    elements.append(Paragraph(f"Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", normal_style))
+    elements.append(Paragraph(format_pdf_text(f"{settings.PROJECT_NAME} - Client Report"), header_style))
+    elements.append(Paragraph(format_pdf_text(f"Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"), item_style))
     elements.append(Spacer(1, 0.2 * inch))
     
     # Client Info
-    elements.append(Paragraph(f"<b>Client:</b> {db_looper.name}", normal_style))
-    elements.append(Paragraph(f"<b>Mobile:</b> {db_looper.mobile}", normal_style))
-    elements.append(Paragraph(f"<b>Month:</b> {today.strftime('%B %Y')}", normal_style))
+    elements.append(Paragraph(f"<b>{format_pdf_text('Client:')}</b> {format_pdf_text(db_looper.name)}", item_style))
+    elements.append(Paragraph(f"<b>{format_pdf_text('Mobile:')}</b> {format_pdf_text(db_looper.mobile)}", item_style))
+    elements.append(Paragraph(f"<b>{format_pdf_text('Month:')}</b> {format_pdf_text(today.strftime('%B %Y'))}", item_style))
     elements.append(Spacer(1, 0.3 * inch))
     
-    elements.append(Paragraph("PURCHASES (Current Month)", section_style))
+    elements.append(Paragraph(format_pdf_text("PURCHASES (Current Month)"), section_style))
     if purchases:
         purchase_data = [["Date", "Package Name", "Rate (PKR/Unit)", "Total (PKR)"]]
         for p in purchases:
@@ -426,28 +459,29 @@ def get_looper_report(looper_id: int, db: Session = Depends(get_db), current_use
     # Products Table
     elements.append(Paragraph("PRODUCTS (Current Month)", section_style))
     if products:
-        product_data = [["Date", "Product", "Price (PKR)"]]
+        product_data = [["Date", format_pdf_text("Product"), format_pdf_text("Price (PKR)")]]
         for p in products:
-            product_data.append([p.created_at.strftime("%Y-%m-%d"), p.name, f"{p.price:,.0f}"])
+            product_data.append([p.created_at.strftime("%Y-%m-%d"), format_pdf_text(p.name), f"{p.price:,.0f}"])
         
         t = Table(product_data, colWidths=[1.5*inch, 2.5*inch, 1.5*inch])
         t.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#f3f4f6")),
             ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTNAME', (0, 0), (-1, -1), DEFAULT_FONT),
+            ('FONTNAME', (0, 0), (-1, 0), f'{DEFAULT_FONT}-Bold' if DEFAULT_FONT == 'Helvetica' else DEFAULT_FONT),
             ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
             ('ALIGN', (2, 1), (2, -1), 'RIGHT'),
         ]))
         elements.append(t)
     else:
-        elements.append(Paragraph("No products purchased this month.", normal_style))
+        elements.append(Paragraph(format_pdf_text("No products purchased this month."), item_style))
 
     elements.append(Spacer(1, 0.2 * inch))
 
     # Payments Table
-    elements.append(Paragraph("PAYMENTS (Current Month)", section_style))
+    elements.append(Paragraph(format_pdf_text("PAYMENTS (Current Month)"), section_style))
     if payments:
-        payment_data = [["Date", "Amount (PKR)"]]
+        payment_data = [[format_pdf_text("Date"), format_pdf_text("Amount (PKR)")]]
         for p in payments:
             payment_data.append([p.created_at.strftime("%Y-%m-%d"), f"{p.amount:,.0f}"])
         
@@ -455,29 +489,31 @@ def get_looper_report(looper_id: int, db: Session = Depends(get_db), current_use
         t.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#f3f4f6")),
             ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTNAME', (0, 0), (-1, -1), DEFAULT_FONT),
+            ('FONTNAME', (0, 0), (-1, 0), f'{DEFAULT_FONT}-Bold' if DEFAULT_FONT == 'Helvetica' else DEFAULT_FONT),
             ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
             ('ALIGN', (1, 1), (1, -1), 'RIGHT'),
             ('TEXTCOLOR', (1, 1), (1, -1), colors.darkgreen),
         ]))
         elements.append(t)
     else:
-        elements.append(Paragraph("No payments recorded this month.", normal_style))
+        elements.append(Paragraph(format_pdf_text("No payments recorded this month."), item_style))
 
     elements.append(Spacer(1, 0.4 * inch))
     
     # Summary Section
-    elements.append(Paragraph("CUMULATIVE SUMMARY", section_style))
+    elements.append(Paragraph(format_pdf_text("CUMULATIVE SUMMARY"), section_style))
     summary_data = [
-        ["Total Charges (All Time)", f"{total_charges:,.0f} PKR"],
-        ["Total Paid (All Time)", f"{total_paid:,.0f} PKR"],
-        ["REMAINING BALANCE", f"{remaining_balance:,.0f} PKR"]
+        [format_pdf_text("Total Charges (All Time)"), f"{total_charges:,.0f} PKR"],
+        [format_pdf_text("Total Paid (All Time)"), f"{total_paid:,.0f} PKR"],
+        [format_pdf_text("REMAINING BALANCE"), f"{remaining_balance:,.0f} PKR"]
     ]
     t = Table(summary_data, colWidths=[3*inch, 2.5*inch])
     t.setStyle(TableStyle([
+        ('FONTNAME', (0, 0), (-1, -1), DEFAULT_FONT),
         ('ALIGN', (0, 0), (0, -1), 'LEFT'),
         ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
-        ('FONTNAME', (0, 2), (-1, 2), 'Helvetica-Bold'),
+        ('FONTNAME', (0, 2), (-1, 2), f'{DEFAULT_FONT}-Bold' if DEFAULT_FONT == 'Helvetica' else DEFAULT_FONT),
         ('BACKGROUND', (0, 2), (-1, 2), colors.HexColor("#fee2e2") if remaining_balance > 0 else colors.HexColor("#dcfce7")),
         ('LINEBELOW', (0, 0), (-1, 0), 1, colors.grey),
         ('LINEBELOW', (0, 1), (-1, 1), 1, colors.grey),
