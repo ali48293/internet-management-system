@@ -1,9 +1,11 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from backend.app.api import auth, loopers, packages, payments, dashboard, users, activity
-from backend.app.database import engine, Base
+from backend.app.database import engine, Base, get_db
 from backend.app.core.config import settings
+from backend.app import models
+from sqlalchemy.orm import Session
 from backend.init_db import init_db
 import os
 
@@ -47,9 +49,12 @@ app.add_middleware(
 
 # Uploads static path skipped in production (using Cloudinary for storage)
 if os.getenv("ENVIRONMENT") != "production":
-    if not os.path.exists(settings.UPLOAD_DIR):
-        os.makedirs(settings.UPLOAD_DIR)
-    app.mount("/static", StaticFiles(directory=settings.UPLOAD_DIR), name="static")
+    try:
+        if not os.path.exists(settings.UPLOAD_DIR):
+            os.makedirs(settings.UPLOAD_DIR)
+        app.mount("/static", StaticFiles(directory=settings.UPLOAD_DIR), name="static")
+    except Exception as e:
+        print(f"Warning: Could not create or mount static directory: {e}")
 
 # Routers
 app.include_router(auth.router, prefix="/api/auth", tags=["Auth"])

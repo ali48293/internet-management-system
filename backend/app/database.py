@@ -14,7 +14,8 @@ if engine_url.startswith("sqlite"):
     engine_kwargs["connect_args"] = {"check_same_thread": False}
 else:
     # Essential for Neon/Vercel: ensure SSL is handled
-    engine_kwargs["connect_args"] = {"sslmode": "require"}
+    # pg8000 uses 'ssl' instead of 'sslmode'
+    engine_kwargs["connect_args"] = {"ssl": True}
 
 engine = create_engine(engine_url, **engine_kwargs)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
