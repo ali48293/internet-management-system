@@ -15,6 +15,7 @@ import io
 from fastapi.responses import StreamingResponse
 from datetime import datetime, date
 import re
+from urllib.parse import quote
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
@@ -493,8 +494,11 @@ def get_looper_report(looper_id: int, db: Session = Depends(get_db), current_use
     sanitized_name = re.sub(r'[^\w\s-]', '', db_looper.name).strip().replace(' ', '_')
     filename = f"{sanitized_name}_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.pdf"
     
+    # Encode filename for Content-Disposition header (RFC 6266)
+    filename_encoded = quote(filename)
+    
     return StreamingResponse(
         buffer,
         media_type="application/pdf",
-        headers={"Content-Disposition": f"attachment; filename={filename}"}
+        headers={"Content-Disposition": f"attachment; filename*=utf-8''{filename_encoded}"}
     )
