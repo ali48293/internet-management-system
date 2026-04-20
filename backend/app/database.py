@@ -2,12 +2,25 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 from backend.app.core.config import settings
 import os
+from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
 
 engine_url = settings.DATABASE_URL
-if engine_url.startswith("postgres://"):
-    engine_url = engine_url.replace("postgres://", "postgresql+pg8000://", 1)
-elif engine_url.startswith("postgresql://"):
-    engine_url = engine_url.replace("postgresql://", "postgresql+pg8000://", 1)
+
+# Robust URL handling for serverless (Neon/Vercel)
+parsed_url = urlparse(engine_url)
+if parsed_url.scheme in ["postgres", "postgresql"]:
+    # 1. Ensure driver is pg8000
+    new_scheme = "postgresql+pg8000"
+    
+    # 2. Strip incompatible query parameters
+    query_params = parse_qs(parsed_url.query)
+    query_params.pop("sslmode", None)
+    query_params.pop("sslrootcert", None)
+    new_query = urlencode(query_params, doseq=True)
+    
+    # 3. Reconstruct URL
+    parsed_url = parsed_url._replace(scheme=new_scheme, query=new_query)
+    engine_url = urlunparse(parsed_url)
 
 engine_kwargs = {}
 if engine_url.startswith("sqlite"):
