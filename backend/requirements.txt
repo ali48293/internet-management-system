@@ -12,3 +12,4 @@ reportlab
 cloudinary
 arabic-reshaper
 python-bidi
+httpx

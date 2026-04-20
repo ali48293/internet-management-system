@@ -4,12 +4,11 @@ from typing import List, Optional
 from backend.app import models, schemas
 from backend.app.database import get_db
 from backend.app.core import security
-from backend.app.api.loopers import log_activity
-import os
-import uuid
-import shutil
 from backend.app.core.config import settings
 from backend.app.utils.storage import upload_file
+from backend.app.utils.sms import notify_payment
+from backend.app.api.loopers import log_activity, calculate_balance
+from fastapi import BackgroundTasks
 
 router = APIRouter()
 
@@ -18,6 +17,7 @@ def create_payment(
     looper_id: int = Form(...),
     amount: float = Form(...),
     receipt: Optional[UploadFile] = File(None),
+    background_tasks: BackgroundTasks = None,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(security.get_current_user)
 ):
@@ -39,6 +39,12 @@ def create_payment(
     db.refresh(db_payment)
     
     log_activity(db, current_user.id, "Add Payment", f"Added payment of {db_payment.amount} for looper ID {looper_id}")
+    
+    # Send SMS notification in the background
+    if background_tasks and db_looper.mobile:
+        current_balance = calculate_balance(db, looper_id)
+        background_tasks.add_task(notify_payment, db_looper.mobile, amount, current_balance)
+        
     return db_payment
 
 @router.delete("/{payment_id}")

@@ -17,4 +17,8 @@ class Settings(BaseSettings):
     CLOUDINARY_API_KEY: str = os.getenv("CLOUDINARY_API_KEY", "")
     CLOUDINARY_API_SECRET: str = os.getenv("CLOUDINARY_API_SECRET", "")
 
+    # SMS Gateway Settings (for Android Gateway or Local Providers)
+    SMS_GATEWAY_URL: str = os.getenv("SMS_GATEWAY_URL", "")
+    SMS_API_KEY: str = os.getenv("SMS_API_KEY", "")
+
 settings = Settings()
