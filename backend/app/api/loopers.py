@@ -27,9 +27,13 @@ import arabic_reshaper
 from bidi.algorithm import get_display
 
 # Font registration for Urdu support
-FONT_PATH = os.path.join(os.path.dirname(__file__), "..", "static", "fonts", "NotoSansArabic-Regular.ttf")
+FONT_DIR = os.path.join(os.path.dirname(__file__), "..", "static", "fonts")
+FONT_PATH = os.path.join(FONT_DIR, "FreeSans.ttf")
+
 if os.path.exists(FONT_PATH):
     pdfmetrics.registerFont(TTFont('UnicodeFont', FONT_PATH))
+    # Note: FreeSans Bold is often a separate file, but we can use the same for now
+    # or register a generic bold if needed. For now, we'll use UnicodeFont for all.
     DEFAULT_FONT = 'UnicodeFont'
 else:
     DEFAULT_FONT = 'Helvetica'
@@ -446,7 +450,7 @@ def get_looper_report(looper_id: int, db: Session = Depends(get_db), current_use
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.black),
             ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
             ('FONTNAME', (0, 0), (-1, -1), DEFAULT_FONT),
-            ('FONTNAME', (0, 0), (-1, 0), f'{DEFAULT_FONT}-Bold' if DEFAULT_FONT == 'Helvetica' else DEFAULT_FONT),
+            ('FONTNAME', (0, 0), (-1, 0), DEFAULT_FONT),
             ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
             ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
             ('ALIGN', (2, 1), (-1, -1), 'RIGHT'),
@@ -469,7 +473,7 @@ def get_looper_report(looper_id: int, db: Session = Depends(get_db), current_use
             ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#f3f4f6")),
             ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
             ('FONTNAME', (0, 0), (-1, -1), DEFAULT_FONT),
-            ('FONTNAME', (0, 0), (-1, 0), f'{DEFAULT_FONT}-Bold' if DEFAULT_FONT == 'Helvetica' else DEFAULT_FONT),
+            ('FONTNAME', (0, 0), (-1, 0), DEFAULT_FONT),
             ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
             ('ALIGN', (2, 1), (2, -1), 'RIGHT'),
         ]))
@@ -511,10 +515,10 @@ def get_looper_report(looper_id: int, db: Session = Depends(get_db), current_use
     ]
     t = Table(summary_data, colWidths=[3*inch, 2.5*inch])
     t.setStyle(TableStyle([
-        ('FONTNAME', (0, 0), (-1, -1), DEFAULT_FONT),
         ('ALIGN', (0, 0), (0, -1), 'LEFT'),
         ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
-        ('FONTNAME', (0, 2), (-1, 2), f'{DEFAULT_FONT}-Bold' if DEFAULT_FONT == 'Helvetica' else DEFAULT_FONT),
+        ('FONTNAME', (0, 0), (-1, -1), DEFAULT_FONT),
+        ('FONTNAME', (0, 2), (-1, 2), DEFAULT_FONT),
         ('BACKGROUND', (0, 2), (-1, 2), colors.HexColor("#fee2e2") if remaining_balance > 0 else colors.HexColor("#dcfce7")),
         ('LINEBELOW', (0, 0), (-1, 0), 1, colors.grey),
         ('LINEBELOW', (0, 1), (-1, 1), 1, colors.grey),
