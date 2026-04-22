@@ -414,17 +414,17 @@ def get_looper_report(looper_id: int, db: Session = Depends(get_db), current_use
     )
 
     # Report Header
-    elements.append(Paragraph(format_pdf_text(f"{settings.PROJECT_NAME} - Client Report"), header_style))
-    elements.append(Paragraph(format_pdf_text(f"Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"), item_style))
+    elements.append(Paragraph(f"<b>{settings.PROJECT_NAME} - Client Report</b>", header_style))
+    elements.append(Paragraph(f"Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", item_style))
     elements.append(Spacer(1, 0.2 * inch))
     
     # Client Info
-    elements.append(Paragraph(f"<b>{format_pdf_text('Client:')}</b> {format_pdf_text(db_looper.name)}", item_style))
-    elements.append(Paragraph(f"<b>{format_pdf_text('Mobile:')}</b> {format_pdf_text(db_looper.mobile)}", item_style))
-    elements.append(Paragraph(f"<b>{format_pdf_text('Month:')}</b> {format_pdf_text(today.strftime('%B %Y'))}", item_style))
+    elements.append(Paragraph(f"<b>Client:</b> {format_pdf_text(db_looper.name)}", item_style))
+    elements.append(Paragraph(f"<b>Mobile:</b> {format_pdf_text(db_looper.mobile)}", item_style))
+    elements.append(Paragraph(f"<b>Month:</b> {today.strftime('%B %Y')}", item_style))
     elements.append(Spacer(1, 0.3 * inch))
     
-    elements.append(Paragraph(format_pdf_text("PURCHASES (Current Month)"), section_style))
+    elements.append(Paragraph("PURCHASES (Current Month)", section_style))
     if purchases:
         purchase_data = [["Date", "Package Name", "Rate (PKR/Unit)", "Total (PKR)"]]
         for p in purchases:
@@ -435,7 +435,7 @@ def get_looper_report(looper_id: int, db: Session = Depends(get_db), current_use
             rate_val = f"{p.unit_price:,.2f}/{unit}" if p.unit_price else "-"
             purchase_data.append([
                 p.created_at.strftime("%Y-%m-%d"), 
-                p.package_name, 
+                format_pdf_text(p.package_name), 
                 rate_val,
                 f"{p.snapshot_price:,.0f}"
             ])
@@ -445,21 +445,22 @@ def get_looper_report(looper_id: int, db: Session = Depends(get_db), current_use
             ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#f3f4f6")),
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.black),
             ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTNAME', (0, 0), (-1, -1), DEFAULT_FONT),
+            ('FONTNAME', (0, 0), (-1, 0), f'{DEFAULT_FONT}-Bold' if DEFAULT_FONT == 'Helvetica' else DEFAULT_FONT),
             ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
             ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
             ('ALIGN', (2, 1), (-1, -1), 'RIGHT'),
         ]))
         elements.append(t)
     else:
-        elements.append(Paragraph("No purchases this month.", normal_style))
+        elements.append(Paragraph("No purchases this month.", item_style))
     
     elements.append(Spacer(1, 0.2 * inch))
     
     # Products Table
     elements.append(Paragraph("PRODUCTS (Current Month)", section_style))
     if products:
-        product_data = [["Date", format_pdf_text("Product"), format_pdf_text("Price (PKR)")]]
+        product_data = [["Date", "Product", "Price (PKR)"]]
         for p in products:
             product_data.append([p.created_at.strftime("%Y-%m-%d"), format_pdf_text(p.name), f"{p.price:,.0f}"])
         
@@ -474,14 +475,14 @@ def get_looper_report(looper_id: int, db: Session = Depends(get_db), current_use
         ]))
         elements.append(t)
     else:
-        elements.append(Paragraph(format_pdf_text("No products purchased this month."), item_style))
+        elements.append(Paragraph("No products purchased this month.", item_style))
 
     elements.append(Spacer(1, 0.2 * inch))
 
     # Payments Table
-    elements.append(Paragraph(format_pdf_text("PAYMENTS (Current Month)"), section_style))
+    elements.append(Paragraph("PAYMENTS (Current Month)", section_style))
     if payments:
-        payment_data = [[format_pdf_text("Date"), format_pdf_text("Amount (PKR)")]]
+        payment_data = [["Date", "Amount (PKR)"]]
         for p in payments:
             payment_data.append([p.created_at.strftime("%Y-%m-%d"), f"{p.amount:,.0f}"])
         
@@ -497,16 +498,16 @@ def get_looper_report(looper_id: int, db: Session = Depends(get_db), current_use
         ]))
         elements.append(t)
     else:
-        elements.append(Paragraph(format_pdf_text("No payments recorded this month."), item_style))
+        elements.append(Paragraph("No payments recorded this month.", item_style))
 
     elements.append(Spacer(1, 0.4 * inch))
     
     # Summary Section
-    elements.append(Paragraph(format_pdf_text("CUMULATIVE SUMMARY"), section_style))
+    elements.append(Paragraph("CUMULATIVE SUMMARY", section_style))
     summary_data = [
-        [format_pdf_text("Total Charges (All Time)"), f"{total_charges:,.0f} PKR"],
-        [format_pdf_text("Total Paid (All Time)"), f"{total_paid:,.0f} PKR"],
-        [format_pdf_text("REMAINING BALANCE"), f"{remaining_balance:,.0f} PKR"]
+        ["Total Charges (All Time)", f"{total_charges:,.0f} PKR"],
+        ["Total Paid (All Time)", f"{total_paid:,.0f} PKR"],
+        ["REMAINING BALANCE", f"{remaining_balance:,.0f} PKR"]
     ]
     t = Table(summary_data, colWidths=[3*inch, 2.5*inch])
     t.setStyle(TableStyle([
