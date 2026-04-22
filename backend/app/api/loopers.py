@@ -30,13 +30,16 @@ from bidi.algorithm import get_display
 FONT_DIR = os.path.join(os.path.dirname(__file__), "..", "static", "fonts")
 FONT_PATH = os.path.join(FONT_DIR, "FreeSans.ttf")
 
-if os.path.exists(FONT_PATH):
-    pdfmetrics.registerFont(TTFont('UnicodeFont', FONT_PATH))
-    # Note: FreeSans Bold is often a separate file, but we can use the same for now
-    # or register a generic bold if needed. For now, we'll use UnicodeFont for all.
-    DEFAULT_FONT = 'UnicodeFont'
-else:
-    DEFAULT_FONT = 'Helvetica'
+DEFAULT_FONT = 'Helvetica'
+try:
+    if os.path.exists(FONT_PATH):
+        pdfmetrics.registerFont(TTFont('UnicodeFont', FONT_PATH))
+        DEFAULT_FONT = 'UnicodeFont'
+    else:
+        # Debugging: check current directory and parent
+        logger.warning(f"Font file not found at {FONT_PATH}. Current dir: {os.getcwd()}, dir(__file__): {os.path.dirname(__file__)}")
+except Exception as e:
+    logger.error(f"Failed to register font: {str(e)}")
 
 def format_pdf_text(text: str) -> str:
     """Reshapes and applies BIDI to text if it contains Urdu/Arabic characters."""
@@ -350,11 +353,12 @@ def delete_looper_product(looper_id: int, product_id: int, db: Session = Depends
 
 @router.get("/{looper_id}/report")
 def get_looper_report(looper_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(security.check_role(["superuser", "manager", "salesman"]))):
-    db_looper = db.query(models.Looper).filter(models.Looper.id == looper_id).first()
-    if not db_looper:
-        raise HTTPException(status_code=404, detail="Looper not found")
+    try:
+        db_looper = db.query(models.Looper).filter(models.Looper.id == looper_id).first()
+        if not db_looper:
+            raise HTTPException(status_code=404, detail="Looper not found")
 
-    today = date.today()
+        today = date.today()
     start_of_month = datetime(today.year, today.month, 1)
 
     # Current month data
@@ -538,8 +542,13 @@ def get_looper_report(looper_id: int, db: Session = Depends(get_db), current_use
     # Encode filename for Content-Disposition header (RFC 6266)
     filename_encoded = quote(filename)
     
-    return StreamingResponse(
-        buffer,
-        media_type="application/pdf",
-        headers={"Content-Disposition": f"attachment; filename*=utf-8''{filename_encoded}"}
-    )
+        return StreamingResponse(
+            buffer,
+            media_type="application/pdf",
+            headers={"Content-Disposition": f"attachment; filename*=utf-8''{filename_encoded}"}
+        )
+    except Exception as e:
+        import traceback
+        error_msg = f"Error generating report: {str(e)}\n{traceback.format_exc()}"
+        logger.error(error_msg)
+        return {"error": error_msg}
