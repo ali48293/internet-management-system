@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 
 # Font registration for Urdu support
 FONT_DIR = os.path.join(os.path.dirname(__file__), "..", "static", "fonts")
-FONT_PATH = os.path.join(FONT_DIR, "NotoSansArabic-Regular.ttf")
+FONT_PATH = os.path.join(FONT_DIR, "FreeSans.ttf")
 
 DEFAULT_FONT = 'Helvetica'
 try:
