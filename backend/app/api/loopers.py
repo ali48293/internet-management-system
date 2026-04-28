@@ -31,16 +31,12 @@ logger = logging.getLogger(__name__)
 
 # Font registration for Urdu support
 FONT_DIR = os.path.join(os.path.dirname(__file__), "..", "static", "fonts")
-FONT_PATH = os.path.join(FONT_DIR, "FreeSans.ttf")
+FONT_PATH_ARABIC = os.path.join(FONT_DIR, "NotoSansArabic-Regular.ttf")
 
 DEFAULT_FONT = 'Helvetica'
 try:
-    if os.path.exists(FONT_PATH):
-        pdfmetrics.registerFont(TTFont('UnicodeFont', FONT_PATH))
-        DEFAULT_FONT = 'UnicodeFont'
-    else:
-        # Debugging: check current directory and parent
-        logger.warning(f"Font file not found at {FONT_PATH}. Current dir: {os.getcwd()}, dir(__file__): {os.path.dirname(__file__)}")
+    if os.path.exists(FONT_PATH_ARABIC):
+        pdfmetrics.registerFont(TTFont('UnicodeFont', FONT_PATH_ARABIC))
 except Exception as e:
     logger.error(f"Failed to register font: {str(e)}")
 
@@ -52,7 +48,8 @@ def format_pdf_text(text: str) -> str:
     if any(ord(c) > 127 for c in text):
         try:
             reshaped_text = arabic_reshaper.reshape(text)
-            return get_display(reshaped_text)
+            display_text = get_display(reshaped_text)
+            return f'<font name="UnicodeFont">{display_text}</font>'
         except Exception:
             return text
     return text
@@ -444,9 +441,13 @@ def get_looper_report(looper_id: int, db: Session = Depends(get_db), current_use
                     unit = "gb"
                 
                 rate_val = f"{p.unit_price:,.2f}/{unit}" if p.unit_price else "-"
+                pkg_name = format_pdf_text(p.package_name)
+                if "<font" in pkg_name:
+                    pkg_name = Paragraph(pkg_name, item_style)
+                    
                 purchase_data.append([
                     p.created_at.strftime("%Y-%m-%d"), 
-                    format_pdf_text(p.package_name), 
+                    pkg_name, 
                     rate_val,
                     f"{p.snapshot_price:,.0f}"
                 ])
@@ -473,7 +474,10 @@ def get_looper_report(looper_id: int, db: Session = Depends(get_db), current_use
         if products:
             product_data = [["Date", "Product", "Price (PKR)"]]
             for p in products:
-                product_data.append([p.created_at.strftime("%Y-%m-%d"), format_pdf_text(p.name), f"{p.price:,.0f}"])
+                prod_name = format_pdf_text(p.name)
+                if "<font" in prod_name:
+                    prod_name = Paragraph(prod_name, item_style)
+                product_data.append([p.created_at.strftime("%Y-%m-%d"), prod_name, f"{p.price:,.0f}"])
             
             t = Table(product_data, colWidths=[1.5*inch, 2.5*inch, 1.5*inch])
             t.setStyle(TableStyle([
