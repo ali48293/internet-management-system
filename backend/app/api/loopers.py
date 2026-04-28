@@ -25,6 +25,9 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 import arabic_reshaper
 from bidi.algorithm import get_display
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Font registration for Urdu support
 FONT_DIR = os.path.join(os.path.dirname(__file__), "..", "static", "fonts")
@@ -359,189 +362,189 @@ def get_looper_report(looper_id: int, db: Session = Depends(get_db), current_use
             raise HTTPException(status_code=404, detail="Looper not found")
 
         today = date.today()
-    start_of_month = datetime(today.year, today.month, 1)
+        start_of_month = datetime(today.year, today.month, 1)
 
-    # Current month data
-    purchases = db.query(models.Purchase).filter(
-        models.Purchase.looper_id == looper_id,
-        models.Purchase.created_at >= start_of_month
-    ).all()
-    
-    products = db.query(models.Product).filter(
-        models.Product.looper_id == looper_id,
-        models.Product.created_at >= start_of_month
-    ).all()
-    
-    payments = db.query(models.Payment).filter(
-        models.Payment.looper_id == looper_id,
-        models.Payment.created_at >= start_of_month
-    ).all()
+        # Current month data
+        purchases = db.query(models.Purchase).filter(
+            models.Purchase.looper_id == looper_id,
+            models.Purchase.created_at >= start_of_month
+        ).all()
+        
+        products = db.query(models.Product).filter(
+            models.Product.looper_id == looper_id,
+            models.Product.created_at >= start_of_month
+        ).all()
+        
+        payments = db.query(models.Payment).filter(
+            models.Payment.looper_id == looper_id,
+            models.Payment.created_at >= start_of_month
+        ).all()
 
-    # Cumulative balance (All time)
-    total_charges = (
-        (db.query(func.sum(models.Purchase.snapshot_price)).filter(models.Purchase.looper_id == looper_id).scalar() or 0.0) +
-        (db.query(func.sum(models.Product.price)).filter(models.Product.looper_id == looper_id).scalar() or 0.0)
-    )
-    total_paid = db.query(func.sum(models.Payment.amount)).filter(models.Payment.looper_id == looper_id).scalar() or 0.0
-    remaining_balance = total_charges - total_paid
+        # Cumulative balance (All time)
+        total_charges = (
+            (db.query(func.sum(models.Purchase.snapshot_price)).filter(models.Purchase.looper_id == looper_id).scalar() or 0.0) +
+            (db.query(func.sum(models.Product.price)).filter(models.Product.looper_id == looper_id).scalar() or 0.0)
+        )
+        total_paid = db.query(func.sum(models.Payment.amount)).filter(models.Payment.looper_id == looper_id).scalar() or 0.0
+        remaining_balance = total_charges - total_paid
 
-    buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=72, leftMargin=72, topMargin=72, bottomMargin=18)
-    elements = []
-    
-    styles = getSampleStyleSheet()
-    title_style = styles['Heading1']
-    subtitle_style = styles['Heading2']
-    normal_style = styles['Normal']
-    
-    # Custom Styles
-    header_style = ParagraphStyle(
-        'HeaderStyle',
-        parent=styles['Heading1'],
-        fontName=DEFAULT_FONT,
-        fontSize=18,
-        spaceAfter=12,
-        alignment=1 # Center
-    )
-    
-    section_style = ParagraphStyle(
-        'SectionStyle',
-        parent=styles['Heading3'],
-        fontName=DEFAULT_FONT,
-        fontSize=12,
-        spaceBefore=10,
-        spaceAfter=6,
-        textColor=colors.HexColor("#3b82f6")
-    )
+        buffer = io.BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=72, leftMargin=72, topMargin=72, bottomMargin=18)
+        elements = []
+        
+        styles = getSampleStyleSheet()
+        title_style = styles['Heading1']
+        subtitle_style = styles['Heading2']
+        normal_style = styles['Normal']
+        
+        # Custom Styles
+        header_style = ParagraphStyle(
+            'HeaderStyle',
+            parent=styles['Heading1'],
+            fontName=DEFAULT_FONT,
+            fontSize=18,
+            spaceAfter=12,
+            alignment=1 # Center
+        )
+        
+        section_style = ParagraphStyle(
+            'SectionStyle',
+            parent=styles['Heading3'],
+            fontName=DEFAULT_FONT,
+            fontSize=12,
+            spaceBefore=10,
+            spaceAfter=6,
+            textColor=colors.HexColor("#3b82f6")
+        )
 
-    item_style = ParagraphStyle(
-        'ItemStyle',
-        parent=styles['Normal'],
-        fontName=DEFAULT_FONT,
-        fontSize=10
-    )
+        item_style = ParagraphStyle(
+            'ItemStyle',
+            parent=styles['Normal'],
+            fontName=DEFAULT_FONT,
+            fontSize=10
+        )
 
-    # Report Header
-    elements.append(Paragraph(f"<b>{settings.PROJECT_NAME} - Client Report</b>", header_style))
-    elements.append(Paragraph(f"Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", item_style))
-    elements.append(Spacer(1, 0.2 * inch))
-    
-    # Client Info
-    elements.append(Paragraph(f"<b>Client:</b> {format_pdf_text(db_looper.name)}", item_style))
-    elements.append(Paragraph(f"<b>Mobile:</b> {format_pdf_text(db_looper.mobile)}", item_style))
-    elements.append(Paragraph(f"<b>Month:</b> {today.strftime('%B %Y')}", item_style))
-    elements.append(Spacer(1, 0.3 * inch))
-    
-    elements.append(Paragraph("PURCHASES (Current Month)", section_style))
-    if purchases:
-        purchase_data = [["Date", "Package Name", "Rate (PKR/Unit)", "Total (PKR)"]]
-        for p in purchases:
-            unit = "mb"
-            if p.package_name and "gb" in p.package_name.lower():
-                unit = "gb"
+        # Report Header
+        elements.append(Paragraph(f"<b>{settings.PROJECT_NAME} - Client Report</b>", header_style))
+        elements.append(Paragraph(f"Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", item_style))
+        elements.append(Spacer(1, 0.2 * inch))
+        
+        # Client Info
+        elements.append(Paragraph(f"<b>Client:</b> {format_pdf_text(db_looper.name)}", item_style))
+        elements.append(Paragraph(f"<b>Mobile:</b> {format_pdf_text(db_looper.mobile)}", item_style))
+        elements.append(Paragraph(f"<b>Month:</b> {today.strftime('%B %Y')}", item_style))
+        elements.append(Spacer(1, 0.3 * inch))
+        
+        elements.append(Paragraph("PURCHASES (Current Month)", section_style))
+        if purchases:
+            purchase_data = [["Date", "Package Name", "Rate (PKR/Unit)", "Total (PKR)"]]
+            for p in purchases:
+                unit = "mb"
+                if p.package_name and "gb" in p.package_name.lower():
+                    unit = "gb"
+                
+                rate_val = f"{p.unit_price:,.2f}/{unit}" if p.unit_price else "-"
+                purchase_data.append([
+                    p.created_at.strftime("%Y-%m-%d"), 
+                    format_pdf_text(p.package_name), 
+                    rate_val,
+                    f"{p.snapshot_price:,.0f}"
+                ])
+        
+            t = Table(purchase_data, colWidths=[1.1*inch, 2.0*inch, 1.2*inch, 1.2*inch])
+            t.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#f3f4f6")),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.black),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('FONTNAME', (0, 0), (-1, -1), DEFAULT_FONT),
+                ('FONTNAME', (0, 0), (-1, 0), DEFAULT_FONT),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+                ('ALIGN', (2, 1), (-1, -1), 'RIGHT'),
+            ]))
+            elements.append(t)
+        else:
+            elements.append(Paragraph("No purchases this month.", item_style))
+        
+        elements.append(Spacer(1, 0.2 * inch))
+        
+        # Products Table
+        elements.append(Paragraph("PRODUCTS (Current Month)", section_style))
+        if products:
+            product_data = [["Date", "Product", "Price (PKR)"]]
+            for p in products:
+                product_data.append([p.created_at.strftime("%Y-%m-%d"), format_pdf_text(p.name), f"{p.price:,.0f}"])
             
-            rate_val = f"{p.unit_price:,.2f}/{unit}" if p.unit_price else "-"
-            purchase_data.append([
-                p.created_at.strftime("%Y-%m-%d"), 
-                format_pdf_text(p.package_name), 
-                rate_val,
-                f"{p.snapshot_price:,.0f}"
-            ])
+            t = Table(product_data, colWidths=[1.5*inch, 2.5*inch, 1.5*inch])
+            t.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#f3f4f6")),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('FONTNAME', (0, 0), (-1, -1), DEFAULT_FONT),
+                ('FONTNAME', (0, 0), (-1, 0), DEFAULT_FONT),
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+                ('ALIGN', (2, 1), (2, -1), 'RIGHT'),
+            ]))
+            elements.append(t)
+        else:
+            elements.append(Paragraph("No products purchased this month.", item_style))
+
+        elements.append(Spacer(1, 0.2 * inch))
+
+        # Payments Table
+        elements.append(Paragraph("PAYMENTS (Current Month)", section_style))
+        if payments:
+            payment_data = [["Date", "Amount (PKR)"]]
+            for p in payments:
+                payment_data.append([p.created_at.strftime("%Y-%m-%d"), f"{p.amount:,.0f}"])
+            
+            t = Table(payment_data, colWidths=[2.5*inch, 2.5*inch])
+            t.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#f3f4f6")),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('FONTNAME', (0, 0), (-1, -1), DEFAULT_FONT),
+                ('FONTNAME', (0, 0), (-1, 0), DEFAULT_FONT),
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+                ('ALIGN', (1, 1), (1, -1), 'RIGHT'),
+                ('TEXTCOLOR', (1, 1), (1, -1), colors.darkgreen),
+            ]))
+            elements.append(t)
+        else:
+            elements.append(Paragraph("No payments recorded this month.", item_style))
+
+        elements.append(Spacer(1, 0.4 * inch))
         
-        t = Table(purchase_data, colWidths=[1.1*inch, 2.0*inch, 1.2*inch, 1.2*inch])
+        # Summary Section
+        elements.append(Paragraph("CUMULATIVE SUMMARY", section_style))
+        summary_data = [
+            ["Total Charges (All Time)", f"{total_charges:,.0f} PKR"],
+            ["Total Paid (All Time)", f"{total_paid:,.0f} PKR"],
+            ["REMAINING BALANCE", f"{remaining_balance:,.0f} PKR"]
+        ]
+        t = Table(summary_data, colWidths=[3*inch, 2.5*inch])
         t.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#f3f4f6")),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.black),
-            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('ALIGN', (0, 0), (0, -1), 'LEFT'),
+            ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
             ('FONTNAME', (0, 0), (-1, -1), DEFAULT_FONT),
-            ('FONTNAME', (0, 0), (-1, 0), DEFAULT_FONT),
-            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
-            ('ALIGN', (2, 1), (-1, -1), 'RIGHT'),
+            ('FONTNAME', (0, 2), (-1, 2), DEFAULT_FONT),
+            ('BACKGROUND', (0, 2), (-1, 2), colors.HexColor("#fee2e2") if remaining_balance > 0 else colors.HexColor("#dcfce7")),
+            ('LINEBELOW', (0, 0), (-1, 0), 1, colors.grey),
+            ('LINEBELOW', (0, 1), (-1, 1), 1, colors.grey),
+            ('TEXTCOLOR', (1, 2), (1, 2), colors.red if remaining_balance > 0 else colors.darkgreen),
+            ('SIZE', (0, 2), (-1, 2), 12),
         ]))
         elements.append(t)
-    else:
-        elements.append(Paragraph("No purchases this month.", item_style))
-    
-    elements.append(Spacer(1, 0.2 * inch))
-    
-    # Products Table
-    elements.append(Paragraph("PRODUCTS (Current Month)", section_style))
-    if products:
-        product_data = [["Date", "Product", "Price (PKR)"]]
-        for p in products:
-            product_data.append([p.created_at.strftime("%Y-%m-%d"), format_pdf_text(p.name), f"{p.price:,.0f}"])
         
-        t = Table(product_data, colWidths=[1.5*inch, 2.5*inch, 1.5*inch])
-        t.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#f3f4f6")),
-            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-            ('FONTNAME', (0, 0), (-1, -1), DEFAULT_FONT),
-            ('FONTNAME', (0, 0), (-1, 0), DEFAULT_FONT),
-            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
-            ('ALIGN', (2, 1), (2, -1), 'RIGHT'),
-        ]))
-        elements.append(t)
-    else:
-        elements.append(Paragraph("No products purchased this month.", item_style))
-
-    elements.append(Spacer(1, 0.2 * inch))
-
-    # Payments Table
-    elements.append(Paragraph("PAYMENTS (Current Month)", section_style))
-    if payments:
-        payment_data = [["Date", "Amount (PKR)"]]
-        for p in payments:
-            payment_data.append([p.created_at.strftime("%Y-%m-%d"), f"{p.amount:,.0f}"])
+        # Build PDF
+        doc.build(elements)
+        buffer.seek(0)
         
-        t = Table(payment_data, colWidths=[2.5*inch, 2.5*inch])
-        t.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#f3f4f6")),
-            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-            ('FONTNAME', (0, 0), (-1, -1), DEFAULT_FONT),
-            ('FONTNAME', (0, 0), (-1, 0), f'{DEFAULT_FONT}-Bold' if DEFAULT_FONT == 'Helvetica' else DEFAULT_FONT),
-            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
-            ('ALIGN', (1, 1), (1, -1), 'RIGHT'),
-            ('TEXTCOLOR', (1, 1), (1, -1), colors.darkgreen),
-        ]))
-        elements.append(t)
-    else:
-        elements.append(Paragraph("No payments recorded this month.", item_style))
-
-    elements.append(Spacer(1, 0.4 * inch))
-    
-    # Summary Section
-    elements.append(Paragraph("CUMULATIVE SUMMARY", section_style))
-    summary_data = [
-        ["Total Charges (All Time)", f"{total_charges:,.0f} PKR"],
-        ["Total Paid (All Time)", f"{total_paid:,.0f} PKR"],
-        ["REMAINING BALANCE", f"{remaining_balance:,.0f} PKR"]
-    ]
-    t = Table(summary_data, colWidths=[3*inch, 2.5*inch])
-    t.setStyle(TableStyle([
-        ('ALIGN', (0, 0), (0, -1), 'LEFT'),
-        ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
-        ('FONTNAME', (0, 0), (-1, -1), DEFAULT_FONT),
-        ('FONTNAME', (0, 2), (-1, 2), DEFAULT_FONT),
-        ('BACKGROUND', (0, 2), (-1, 2), colors.HexColor("#fee2e2") if remaining_balance > 0 else colors.HexColor("#dcfce7")),
-        ('LINEBELOW', (0, 0), (-1, 0), 1, colors.grey),
-        ('LINEBELOW', (0, 1), (-1, 1), 1, colors.grey),
-        ('TEXTCOLOR', (1, 2), (1, 2), colors.red if remaining_balance > 0 else colors.darkgreen),
-        ('SIZE', (0, 2), (-1, 2), 12),
-    ]))
-    elements.append(t)
-    
-    # Build PDF
-    doc.build(elements)
-    buffer.seek(0)
-    
-    # Sanitize name for filename (remove non-alphanumeric characters)
-    sanitized_name = re.sub(r'[^\w\s-]', '', db_looper.name).strip().replace(' ', '_')
-    filename = f"{sanitized_name}_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.pdf"
-    
-    # Encode filename for Content-Disposition header (RFC 6266)
-    filename_encoded = quote(filename)
-    
+        # Sanitize name for filename (remove non-alphanumeric characters)
+        sanitized_name = re.sub(r'[^\w\s-]', '', db_looper.name).strip().replace(' ', '_')
+        filename = f"{sanitized_name}_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.pdf"
+        
+        # Encode filename for Content-Disposition header (RFC 6266)
+        filename_encoded = quote(filename)
+        
         return StreamingResponse(
             buffer,
             media_type="application/pdf",
